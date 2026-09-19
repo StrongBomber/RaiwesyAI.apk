@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  checks: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -91,31 +92,56 @@ jobs:
             assembleDebug assembleRelease \
             -Pnvidia_api_key="$NVIDIA_API_KEY" 2>&1 | tee build-output.log
 
-      # Derleme hatasinda, hatanin son satirlarini repoya yazi ki
-      # (log indiremiyen ortamlarda) hata okunabilsin.
-      - name: Publish build error log (on failure)
+      # Derleme hatasinda hatayi (a) calisma sayfasina annotation olarak
+      # yazar, (b) repoya ci/last-error.log olarak push'lar.
+      # Bu adim ASLA basarisiz sayilmaz (set +e); amaclar bilgilendirme.
+      - name: Report build error (on failure)
         if: failure()
         run: |
+          set +e
+          ERR=$(tail -n 300 build-output.log 2>/dev/null \
+            | sed -E 's/(nvidia_api_key=")[^"]*(")/\1***\2/' \
+            | tail -c 30000)
+          [ -z "$ERR" ] && ERR="(build-output.log bulunamadi)"
+
+          # --- kanal 1: check-run annotation (calisma sayfasindan okunur) ---
+          ERRMSG="$ERR" python3 - <<'PYEOF'
+          import json, os
+          msg = os.environ.get("ERRMSG", "")[:60000]
+          body = [{
+              "path": ".github/workflows/android.yml",
+              "start_line": 1,
+              "end_line": 1,
+              "annotation_level": "failure",
+              "message": "=== GRADLE HATA DETAYI (son satirlar) ===\n" + msg,
+          }]
+          open("/tmp/ann.json", "w").write(json.dumps(body))
+          PYEOF
+          gh api -X POST "repos/$GITHUB_REPOSITORY/check-runs/$GITHUB_JOB/annotations" \
+            --input /tmp/ann.json > /tmp/ann_result.txt 2>&1 \
+            && echo ">>> Annotation yazildi." \
+            || { echo ">>> Annotation basarisiz:"; cat /tmp/ann_result.txt; }
+
+          # --- kanal 2: repoya dosya olarak (dongu korumali) ---
           mkdir -p ci
           {
             echo "# Son basarisiz CI derlemesi"
             echo "# run: ${{ github.run_id }} sha: ${{ github.sha }}"
-            echo "==================== GRADLE (son 400 satir) ===================="
-            tail -n 400 build-output.log 2>/dev/null || echo "(build-output.log bulunamadi)"
-            echo "==================== local.properties (maske) ===================="
-            sed -E 's/^(nvidia_api_key|releaseStorePassword|releaseKeyPassword)=.*/\1=***MASKED***/' local.properties 2>/dev/null || echo "(yok)"
+            echo "==================== GRADLE (son 300 satir) ===================="
+            tail -n 300 build-output.log 2>/dev/null || echo "(build-output.log yok)"
           } > ci/last-error.log
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ci/last-error.log
           if git diff --cached --quiet; then
-            echo ">>> Ayni hata zaten repoda -> yeni push yok (dongu korumasi)."
+            echo ">>> Ayni hata zaten repoda -> push yok (dongu korumasi)."
           else
-            git commit -m "chore(ci): son build hatasi (run ${{ github.run_id }})"
-            git push origin HEAD:"${{ github.ref_name }}"
-            echo ">>> Hata logu repoya yazildi: ci/last-error.log"
+            git commit -m "chore(ci): son build hatasi (run ${{ github.run_id }})" \
+              && git push origin HEAD:"${{ github.ref_name }}" \
+              && echo ">>> Hata logu repoya yazildi: ci/last-error.log" \
+              || echo ">>> Repo push'u basarisiz (annotation kanali hala gecerli)."
           fi
+          exit 0
 
       - name: List build outputs
         run: |
