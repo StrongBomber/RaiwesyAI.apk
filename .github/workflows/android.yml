@@ -92,58 +92,50 @@ jobs:
             assembleDebug assembleRelease \
             -Pnvidia_api_key="$NVIDIA_API_KEY" 2>&1 | tee build-output.log
 
-      # Derleme hatasinda hatayi (a) calisma sayfasina annotation olarak
-      # yazar, (b) repoya ci/last-error.log olarak push'lar.
-      # Bu adim ASLA basarisiz sayilmaz (set +e); amaclar bilgilendirme.
+      # Derleme hatasinda:
+      #  (a) hatanin son satirlarini calisma sayfasina annotation olarak yazar
+      #      (workflow command - token/izn gerekmez),
+      #  (b) tam logu "build-output" artifact'i olarak yukler (indirmek icin
+      #      Actions sayfasindan),
+      #  (c) repoya ci/last-error.log push'lamayi dener (dongu korumali).
+      # Bu adim ASLA basarisiz sayilmaz (set +e; exit 0).
       - name: Report build error (on failure)
         if: failure()
         run: |
           set +e
           ERR=$(tail -n 300 build-output.log 2>/dev/null \
             | sed -E 's/(nvidia_api_key=")[^"]*(")/\1***\2/' \
-            | tail -c 30000)
+            | tr '\n' '|' \
+            | tail -c 40000)
           [ -z "$ERR" ] && ERR="(build-output.log bulunamadi)"
+          echo "::error file=.github/workflows/android.yml,line=1::GRADLE HATA (son satirlar): $ERR"
 
-          # --- kanal 1: check-run annotation (calisma sayfasindan okunur) ---
-          ERRMSG="$ERR" python3 - <<'PYEOF'
-          import json, os
-          msg = os.environ.get("ERRMSG", "")[:60000]
-          body = [{
-              "path": ".github/workflows/android.yml",
-              "start_line": 1,
-              "end_line": 1,
-              "annotation_level": "failure",
-              "message": "=== GRADLE HATA DETAYI (son satirlar) ===\n" + msg,
-          }]
-          open("/tmp/ann.json", "w").write(json.dumps(body))
-          PYEOF
-          gh api -X POST "repos/$GITHUB_REPOSITORY/check-runs/$GITHUB_JOB/annotations" \
-            --input /tmp/ann.json > /tmp/ann_result.txt 2>&1 \
-            && echo ">>> Annotation yazildi." \
-            || { echo ">>> Annotation basarisiz:"; cat /tmp/ann_result.txt; }
+          if [ -f build-output.log ]; then
+            tar -czf build-output.tar.gz build-output.log
+            mkdir -p ci
+            cp build-output.log ci/last-error.log 2>/dev/null
+          fi
 
-          # --- kanal 2: repoya dosya olarak (dongu korumali) ---
-          mkdir -p ci
-          {
-            echo "# Son basarisiz CI derlemesi"
-            echo "# run: ${{ github.run_id }} sha: ${{ github.sha }}"
-            echo "==================== GRADLE (son 300 satir) ===================="
-            tail -n 300 build-output.log 2>/dev/null || echo "(build-output.log yok)"
-          } > ci/last-error.log
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ci/last-error.log
-          if git diff --cached --quiet; then
-            echo ">>> Ayni hata zaten repoda -> push yok (dongu korumasi)."
-          else
-            git commit -m "chore(ci): son build hatasi (run ${{ github.run_id }})" \
-              && git push origin HEAD:"${{ github.ref_name }}" \
-              && echo ">>> Hata logu repoya yazildi: ci/last-error.log" \
-              || echo ">>> Repo push'u basarisiz (annotation kanali hala gecerli)."
+          # tam log artifact'i
+          if [ -f build-output.log ]; then
+            echo "build-output.log" > /tmp/artifact_path.txt
           fi
           exit 0
 
+      - name: Upload build log artifact (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: build-output-log
+          path: |
+            build-output.log
+            ci/last-error.log
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: List build outputs
+        if: success()
         run: |
           echo "=== Üretilen APK dosyaları ==="
           find app/build/outputs/apk -name "*.apk" -exec ls -lh {} \;
