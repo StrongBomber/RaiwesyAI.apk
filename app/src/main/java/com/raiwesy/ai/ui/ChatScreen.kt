@@ -23,7 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Sparkles
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -143,7 +143,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 },
                 navigationIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Sparkles,
+                        imageVector = Icons.Outlined.AutoAwesome,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )

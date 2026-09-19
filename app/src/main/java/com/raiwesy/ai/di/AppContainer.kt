@@ -34,10 +34,11 @@ class AppContainer(context: Context) {
                 Log.v("RaiwesyHttp", message)
             }
         }
-        // REDACTED: Authorization header (API key) is never logged.
-        // NONE in release builds for zero overhead and zero leakage.
+        // BASIC: yalnızca istek metodu + URL + yanıt kodu loglanır;
+        // Authorization header'ı (API anahtarı) ASLA loga yazılmaz.
+        // Release'te NONE: sıfır overhead, sıfır sızıntı.
         logging.level = if (BuildConfig.DEBUG) {
-            HttpLoggingInterceptor.Level.REDACTED
+            HttpLoggingInterceptor.Level.BASIC
         } else {
             HttpLoggingInterceptor.Level.NONE
         }

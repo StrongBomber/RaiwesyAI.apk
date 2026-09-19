@@ -11,6 +11,7 @@ import com.raiwesy.ai.data.model.ChatChunk
 import com.raiwesy.ai.data.model.ChatCompletionRequest
 import com.raiwesy.ai.data.model.ChatRequestMessage
 import java.io.IOException
+import kotlin.io.bufferedReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -59,7 +60,7 @@ class ChatRepository(
         val response = api.chatStream(request)
         if (!response.isSuccessful) {
             val detail = runCatching {
-                response.errorBody?.string()?.let { extractErrorDetail(it) }
+                response.errorBody()?.string()?.let { extractErrorDetail(it) }
             }.getOrNull()
             throw ApiException(response.code(), detail)
         }
@@ -101,7 +102,7 @@ class ChatRepository(
         val response = api.chatCompletion(request)
         if (!response.isSuccessful) {
             val detail = runCatching {
-                response.errorBody?.string()?.let { extractErrorDetail(it) }
+                response.errorBody()?.string()?.let { extractErrorDetail(it) }
             }.getOrNull()
             throw ApiException(response.code(), detail)
         }

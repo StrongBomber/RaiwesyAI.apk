@@ -41,7 +41,7 @@ fun EmptyState(
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.Center
     ) {
         Box(
             modifier = Modifier
@@ -51,7 +51,7 @@ fun EmptyState(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Outlined.Sparkles,
+                imageVector = Icons.Outlined.AutoAwesome,
                 contentDescription = null,
                 modifier = Modifier.size(38.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
