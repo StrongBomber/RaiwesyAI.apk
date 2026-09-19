@@ -1,9 +1,5 @@
 package com.raiwesy.ai.ui.components
 
-import androidx.compose.animation.core.InfiniteRepeatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,8 +23,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberInfiniteTransition
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +37,7 @@ import com.raiwesy.ai.data.Role
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 /**
  * A single chat bubble (user = trailing/indigo, assistant = leading/surface)
@@ -163,28 +163,27 @@ private fun AssistantAvatar() {
 /** Three pulsing dots shown while the assistant is "thinking". */
 @Composable
 private fun TypingIndicator() {
-    val transition = rememberInfiniteTransition(label = "typing")
+    var activeDot by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            activeDot = (activeDot + 1) % 3
+            delay(320)
+        }
+    }
     Row(
         modifier = Modifier.padding(vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(3) { index ->
-            val alpha by transition.animateFloat(
-                initialValue = 0.25f,
-                targetValue = 1f,
-                animationSpec = InfiniteRepeatable(
-                    animation = tween(durationMillis = 650, delayMillis = index * 160),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "dot$index"
-            )
             Box(
                 modifier = Modifier
                     .padding(horizontal = 2.dp)
                     .size(7.dp)
                     .clip(CircleShape)
                     .background(
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f * alpha)
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = if (index == activeDot) 0.9f else 0.3f
+                        )
                     )
             )
         }
@@ -194,22 +193,21 @@ private fun TypingIndicator() {
 /** Blinking block cursor shown at the end of a streaming reply. */
 @Composable
 private fun StreamingCursor() {
-    val transition = rememberInfiniteTransition(label = "cursor")
-    val alpha by transition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 1f,
-        animationSpec = InfiniteRepeatable(
-            animation = tween(durationMillis = 500),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cursorAlpha"
-    )
+    var visible by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            visible = !visible
+            delay(530)
+        }
+    }
     Box(
         modifier = Modifier
             .padding(start = 3.dp)
             .width(2.5.dp)
             .height(14.dp)
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha))
+            .background(
+                MaterialTheme.colorScheme.primary.copy(alpha = if (visible) 0.9f else 0.15f)
+            )
     )
 }
 
