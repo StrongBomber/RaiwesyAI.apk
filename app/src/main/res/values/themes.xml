@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Ana tema: Material 3 + gece/gündüz (Compose içini kendisi yönetir) -->
+    <style name="Theme.RaiwesyAI" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Açılış (splash) teması - androidx.core:core-splashscreen -->
+    <style name="Theme.RaiwesyAI.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.RaiwesyAI</item>
+    </style>
+
+</resources>

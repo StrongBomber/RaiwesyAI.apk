@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Marka rengi: koyu indigo (splash + launcher arka planı) -->
+    <color name="brand_indigo_dark">#312E81</color>
+    <color name="splash_background">#312E81</color>
+    <color name="ic_launcher_background">#312E81</color>
+</resources>

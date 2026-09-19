@@ -1,0 +1,40 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---------------------------------------------------------------------------
+# SENSITIVE - NEVER COMMIT THESE FILES
+# local.properties holds the Android SDK path AND the NVIDIA API key.
+# Keystores hold the release signing identity.
+# ---------------------------------------------------------------------------
+local.properties
+*.keystore
+!debug.keystore
+*.jks
+*.p12
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+.kotlin/
+*.hprof
+
+# Unit / Android test outputs
+output/
+tmp/
+
+# Build artifacts
+*.apk
+*.aab
+*.aab.md5
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

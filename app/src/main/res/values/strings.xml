@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Uygulama -->
+    <string name="app_name">Raiwesy AI</string>
+    <string name="model_badge">%1$s • NVIDIA</string>
+    <string name="settings">Ayarlar</string>
+
+    <!-- Yazma çubuğu -->
+    <string name="composer_placeholder">Bir mesaj yazın…</string>
+    <string name="send">Gönder</string>
+    <string name="stop">Durdur</string>
+
+    <!-- Boş durum -->
+    <string name="empty_title">Raiwesy AI</string>
+    <string name="empty_subtitle">Merhaba! Bugün size nasıl yardımcı olabilirim? GLM-5.3 modeliyle sohbet etmeye başlayın.</string>
+    <string-array name="suggestions">
+        <item>Bana kendinden bahset</item>
+        <item>Yapay zeka nedir?</item>
+        <item>Bana kısa bir şiir yaz</item>
+    </string-array>
+
+    <!-- Durum bantları -->
+    <string name="offline_banner">Çevrimdışısınız. Mesaj göndermek için internet bağlantısı gereklidir.</string>
+    <string name="no_key_banner">NVIDIA API anahtarı tanımlı değil.</string>
+    <string name="open_settings">Ayarlar</string>
+    <string name="error_title">Hata</string>
+    <string name="retry">Tekrar dene</string>
+    <string name="close">Kapat</string>
+
+    <!-- Mesaj işlemleri -->
+    <string name="delete_message_title">Mesajı sil</string>
+    <string name="delete_message_text">Bu mesaj sohbet geçmişinden kalıcı olarak silinecek. Emin misiniz?</string>
+    <string name="delete">Sil</string>
+    <string name="cancel">Vazgeç</string>
+    <string name="clear_chat_title">Sohbeti temizle</string>
+    <string name="clear_chat_text">Tüm mesaj geçmişi kalıcı olarak silinecek. Emin misiniz?</string>
+    <string name="clear_chat_confirm">Evet, temizle</string>
+    <string name="clear_chat">Tüm sohbeti sil</string>
+
+    <!-- Çökme koruma -->
+    <string name="crash_toast">Beklenmeyen bir hata oluştu. Uygulama yeniden başlatılıyor…</string>
+    <string name="crash_dialog_title">Uygulama yeniden başlatıldı</string>
+    <string name="crash_dialog_text">Uygulama önce beklenmeyen bir hata nedeniyle kapandı ve otomatik olarak yeniden başlatıldı. Sorun devam ederse lütfen bildirin.</string>
+    <string name="ok">Tamam</string>
+
+    <!-- Ayarlar: API anahtarı -->
+    <string name="section_api_key">API Anahtarı</string>
+    <string name="api_key_info">Anahtarınızı bu ekrana yapıştırın. Anahtar yalnızca bu cihazda şifreli olarak saklanır; kaynak koda asla yazılmaz.</string>
+    <string name="api_key_embedded_info">Derleme sırasında bir anahtar gömüldü. İsterseniz buraya kendi anahtarınızı yazarak onu geçersiz kılabilirsiniz.</string>
+    <string name="api_key_label">NVIDIA API Key</string>
+    <string name="api_key_supporting">nvda- ile başlayan anahtarınızı kullanın. Boş bırakıp kaydetmek cihazdaki anahtarı siler.</string>
+    <string name="api_key_clear">Temizle</string>
+    <string name="save">Kaydet</string>
+    <string name="toggle_key_visibility">Anahtarı göster/gizle</string>
+
+    <!-- Ayarlar: görünüm -->
+    <string name="section_appearance">Görünüm</string>
+    <string name="appearance_system">Sistem</string>
+    <string name="appearance_light">Açık</string>
+    <string name="appearance_dark">Koyu</string>
+
+    <!-- Ayarlar: sohbet ve hakkında -->
+    <string name="section_chat">Sohbet</string>
+    <string name="section_about">Hakkında</string>
+    <string name="about_text">Model: %1$s\nAPI: %2$s\nSürüm: %3$s</string>
+</resources>

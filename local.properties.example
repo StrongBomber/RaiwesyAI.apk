@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# YEREL (LOCAL) YAPILANDIRMA ÖRNEĞİ
+#
+# Kullanım:
+#   cp local.properties.example local.properties
+# ve değerleri doldurun.
+#
+# ÖNEMLİ: local.properties dosyası .gitignore ile korunmaktadır.
+# BU DOSYAYI ASLA GIT'E KOMİT LEYİN!
+# CI (GitHub Actions) içinde API anahtarı GitHub Secrets'tan
+# alınır: NVIDIA_API_KEY
+# ---------------------------------------------------------------------------
+
+# Android SDK yolu (Android Studio bunu otomatik yazar;
+# manuel/CI dışındaki makinelerde gereklidir).
+sdk.dir=/path/to/your/android/sdk
+
+# NVIDIA API anahtarı (https://build.nvidia.com -> API Keys).
+# BuildConfig'e derleme zamanında gömülür, kaynak koda asla yazılmaz.
+nvidia_api_key=
+
+# --- Release APK imzalama (opsiyonel) ---
+# CI'da bu değerler GitHub Secrets üzerinden local.properties'e yazılır:
+#   KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+releaseStoreFile=release.keystore
+releaseStorePassword=
+releaseKeyAlias=
+releaseKeyPassword=

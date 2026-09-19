@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Gradle bağımlılıkları (version catalog) için haftalık güncelleme
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # GitHub Actions eklentileri için haftalık güncelleme
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
