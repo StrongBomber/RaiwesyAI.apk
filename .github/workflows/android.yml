@@ -33,26 +33,34 @@ jobs:
       - name: Setup Android SDK
         uses: android/setup-android@v3
 
-      # Opsiyonel: GitHub Secrets'tan release keystore üretme.
-      # Secrets tanımlı değilse release APK "imzasız" üretilir.
-      - name: Decode release keystore (optional)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      # Her iki APK varyantini derle.
+      # NVIDIA API anahtarı ve (opsiyonel) release keystore GitHub
+      # Secrets'tan gelir ve repoya asla yazılmaz.
+      - name: Build debug and release APKs
         env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
-          printf 'releaseStoreFile=%s\nreleaseStorePassword=%s\nreleaseKeyAlias=%s\nreleaseKeyPassword=%s\n' \
-            'release.keystore' "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" >> local.properties
+          # Opsiyonel: secrets'tan release keystore üret
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+            {
+              echo "releaseStoreFile=release.keystore"
+              echo "releaseStorePassword=$KEYSTORE_PASSWORD"
+              echo "releaseKeyAlias=$KEY_ALIAS"
+              echo "releaseKeyPassword=$KEY_PASSWORD"
+            } >> local.properties
+            echo "Release keystore ayarlandi."
+          else
+            echo "Keystore secret'i yok -> release APK imzasiz uretilecek."
+          fi
 
-      # NVIDIA API anahtarı GitHub Secrets'tan gelir (kodda YOK).
-      - name: Build debug and release APKs
-        run: |
           ./gradlew --no-daemon --stacktrace \
             assembleDebug assembleRelease \
-            -Pnvidia_api_key="${{ secrets.NVIDIA_API_KEY }}"
+            -Pnvidia_api_key="$NVIDIA_API_KEY"
 
       - name: List build outputs
         run: |
