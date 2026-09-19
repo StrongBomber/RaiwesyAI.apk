@@ -167,22 +167,30 @@ jobs:
           MODEL: z-ai/glm-5.3
         run: |
           set +e
-          if [ -z "$NVIDIA_API_KEY" ]; then
-            echo "::notice::NVIDIA_API_KEY secret'i yok -> kontrol atlandi (uygulama gomulu anahtarla calisir)."
+          # Secret yoksa, koddaki gomulu varsayilan anahtari dogrula
+          # (uygulamanin gercekten calisacagi anahtar).
+          DEFAULT_KEY=$(sed -n 's/^[[:space:]]*"nvapi[^"]*"[[:space:]]*$/\0/p' \
+            app/src/main/java/com/raiwesy/ai/core/util/ApiKeyManager.kt | head -1 | tr -d ' \t"')
+          KEY="${NVIDIA_API_KEY:-$DEFAULT_KEY}"
+          KEY_SRC="secret"
+          [ -z "$NVIDIA_API_KEY" ] && KEY_SRC="gomulu-varsayilan"
+          if [ -z "$KEY" ]; then
+            echo "::warning::Kullanilacak API anahtari yok (ne secret ne gomulu anahtar) -> kontrol atlandi."
             exit 0
           fi
+          echo ">>> API kontrolu anahtari: $KEY_SRC"
           CODE=$(curl -s -o /tmp/api_resp.json -w '%{http_code}' -m 90 \
-            -H "Authorization: Bearer $NVIDIA_API_KEY" \
+            -H "Authorization: Bearer $KEY" \
             -H 'Content-Type: application/json' \
             https://integrate.api.nvidia.com/v1/chat/completions \
             -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":8}")
           BODY=$(head -c 600 /tmp/api_resp.json | tr '\n' ' ' \
-            | sed -E "s/$NVIDIA_API_KEY/***MASKED***/g")
+            | sed -E "s/$KEY/***MASKED***/g")
           if [ "$CODE" = "200" ]; then
             echo "::notice::API OK (HTTP 200) - model: $MODEL"
           else
             MODELS=$(curl -s -m 90 \
-              -H "Authorization: Bearer $NVIDIA_API_KEY" \
+              -H "Authorization: Bearer $KEY" \
               https://integrate.api.nvidia.com/v1/models \
               | tr ',' '\n' | grep -oE '"id": *"[^"]+"' | head -n 80 | tr '\n' ' ')
             echo "::error file=.github/workflows/android.yml,line=1::API HATA: HTTP $CODE - $BODY - KULLANILABILECEK MODELLER: $MODELS"
