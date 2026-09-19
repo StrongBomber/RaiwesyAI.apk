@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -69,6 +69,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          set -o pipefail
           # Opsiyonel: secrets'tan release keystore üret
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
@@ -83,9 +84,38 @@ jobs:
             echo ">>> Keystore secret'i yok -> release APK imzasiz uretilecek."
           fi
 
+          java -version 2>&1 | head -1
+          echo ">>> ANDROID_HOME=$ANDROID_HOME"
+
           ./gradlew --no-daemon --stacktrace \
             assembleDebug assembleRelease \
-            -Pnvidia_api_key="$NVIDIA_API_KEY"
+            -Pnvidia_api_key="$NVIDIA_API_KEY" 2>&1 | tee build-output.log
+
+      # Derleme hatasinda, hatanin son satirlarini repoya yazi ki
+      # (log indiremiyen ortamlarda) hata okunabilsin.
+      - name: Publish build error log (on failure)
+        if: failure()
+        run: |
+          mkdir -p ci
+          {
+            echo "# Son basarisiz CI derlemesi"
+            echo "# run: ${{ github.run_id }} sha: ${{ github.sha }}"
+            echo "==================== GRADLE (son 400 satir) ===================="
+            tail -n 400 build-output.log 2>/dev/null || echo "(build-output.log bulunamadi)"
+            echo "==================== local.properties (maske) ===================="
+            sed -E 's/^(nvidia_api_key|releaseStorePassword|releaseKeyPassword)=.*/\1=***MASKED***/' local.properties 2>/dev/null || echo "(yok)"
+          } > ci/last-error.log
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ci/last-error.log
+          if git diff --cached --quiet; then
+            echo ">>> Ayni hata zaten repoda -> yeni push yok (dongu korumasi)."
+          else
+            git commit -m "chore(ci): son build hatasi (run ${{ github.run_id }})"
+            git push origin HEAD:"${{ github.ref_name }}"
+            echo ">>> Hata logu repoya yazildi: ci/last-error.log"
+          fi
 
       - name: List build outputs
         run: |
