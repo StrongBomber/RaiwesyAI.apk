@@ -105,7 +105,7 @@ jobs:
           if [ -f build-output.log ]; then
             WGW=$(awk '/What went wrong/{f=1} f{print; c++; if (c>=30) exit}' build-output.log)
             CAUSES=$(grep -m 10 'Caused by:' build-output.log)
-            CODE=$(grep -E '^(e: |error: |> Task .*FAILED|Execution failed for task)' build-output.log | head -n 50)
+            CODE=$(grep -A 6 -E '^(e: |error: |> Task .*FAILED|Execution failed for task)' build-output.log | head -n 80)
             TASKS=$(grep -E '^> Task ' build-output.log | tail -n 15 | tr '\n' ' ')
             SUM=$(grep -E 'BUILD (FAILED|SUCCESSFUL)|actionable task' build-output.log | tail -n 2)
             [ -z "$WGW" ] && WGW=$(tail -n 40 build-output.log)

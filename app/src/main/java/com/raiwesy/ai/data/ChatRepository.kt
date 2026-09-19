@@ -67,7 +67,10 @@ class ChatRepository(
 
         val body = response.body() ?: throw IOException("Sunucu boş yanıt döndürdü.")
         body.use { responseBody ->
-            val reader = responseBody.charStream().bufferedReader()
+            val reader = java.io.BufferedReader(
+                responseBody.charStream(),
+                java.nio.charset.StandardCharsets.UTF_8
+            )
             var line = reader.readLine()
             while (line != null) {
                 if (line.startsWith(SSE_DATA_PREFIX)) {
