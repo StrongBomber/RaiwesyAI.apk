@@ -41,6 +41,7 @@ val systemPrompt: String =
 android {
     namespace = "com.raiwesy.ai"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "com.raiwesy.ai"
