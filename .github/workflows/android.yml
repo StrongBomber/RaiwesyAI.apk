@@ -154,3 +154,37 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
+
+  # API saglik kontrolu: anahtar + model adinin calistigini dogrular.
+  # (BuildConfig.MODEL degistirilirse burada da guncellensin.)
+  api-check:
+    name: API Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check AI API
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          MODEL: z-ai/glm-5.3
+        run: |
+          set +e
+          if [ -z "$NVIDIA_API_KEY" ]; then
+            echo "::notice::NVIDIA_API_KEY secret'i yok -> kontrol atlandi (uygulama gomulu anahtarla calisir)."
+            exit 0
+          fi
+          CODE=$(curl -s -o /tmp/api_resp.json -w '%{http_code}' -m 90 \
+            -H "Authorization: Bearer $NVIDIA_API_KEY" \
+            -H 'Content-Type: application/json' \
+            https://integrate.api.nvidia.com/v1/chat/completions \
+            -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":8}")
+          BODY=$(head -c 600 /tmp/api_resp.json | tr '\n' ' ' \
+            | sed -E "s/$NVIDIA_API_KEY/***MASKED***/g")
+          if [ "$CODE" = "200" ]; then
+            echo "::notice::API OK (HTTP 200) - model: $MODEL"
+          else
+            MODELS=$(curl -s -m 90 \
+              -H "Authorization: Bearer $NVIDIA_API_KEY" \
+              https://integrate.api.nvidia.com/v1/models \
+              | tr ',' '\n' | grep -oE '"id": *"[^"]+"' | head -n 80 | tr '\n' ' ')
+            echo "::error file=.github/workflows/android.yml,line=1::API HATA: HTTP $CODE - $BODY - KULLANILABILECEK MODELLER: $MODELS"
+            exit 1
+          fi

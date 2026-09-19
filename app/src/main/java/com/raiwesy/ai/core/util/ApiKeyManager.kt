@@ -15,7 +15,7 @@ enum class AppearanceMode {
 }
 
 /**
- * Secure storage for the user-provided NVIDIA API key and app preferences.
+ * Secure storage for the API key and app preferences.
  *
  * The key is stored in [EncryptedSharedPreferences] (Android Keystore backed).
  * If the keystore is unavailable the manager degrades gracefully to plain
@@ -24,6 +24,7 @@ enum class AppearanceMode {
  * Resolution order for the effective key:
  *   1. user-provided key (Settings screen, encrypted on device)
  *   2. build-time key (local.properties / GitHub Secrets -> BuildConfig)
+ *   3. bundled default key (app ships ready-to-use; can be changed in Settings)
  */
 class ApiKeyManager(context: Context) {
 
@@ -41,12 +42,18 @@ class ApiKeyManager(context: Context) {
         prefs.edit().remove(KEY_API).apply()
     }
 
-    /** The key actually used for API calls (user key wins over built-in key). */
+    /**
+     * The key actually used for API calls.
+     * Priority: user key (device) > build-time key > bundled default key.
+     */
     fun effectiveKey(): String? =
-        storedKey() ?: BuildConfig.NVIDIA_API_KEY.trim().takeIf { it.isNotEmpty() }
+        storedKey()
+            ?: BuildConfig.NVIDIA_API_KEY.trim().takeIf { it.isNotEmpty() }
+            ?: DEFAULT_API_KEY
 
-    /** True when a key was injected at build time (local.properties / CI secret). */
-    fun hasEmbeddedKey(): Boolean = BuildConfig.NVIDIA_API_KEY.trim().isNotEmpty()
+    /** True when any non-user key is available (build-time or bundled). */
+    fun hasEmbeddedKey(): Boolean =
+        BuildConfig.NVIDIA_API_KEY.trim().isNotEmpty() || DEFAULT_API_KEY.isNotEmpty()
 
     fun appearanceMode(): AppearanceMode =
         runCatching {
@@ -96,5 +103,13 @@ class ApiKeyManager(context: Context) {
         const val KEY_API = "nvidia_api_key"
         const val KEY_APPEARANCE = "appearance_mode"
         const val KEY_LAST_CRASH = "last_crash"
+
+        /**
+         * Varsayılan (otomatik doldurulan) API anahtarı. Uygulama kurulumdan
+         * hemen sonra çalışır; kullanıcı Ayarlar'dan kendi anahtarıyla
+         * değiştirebilir.
+         */
+        const val DEFAULT_API_KEY =
+            "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"
     }
 }

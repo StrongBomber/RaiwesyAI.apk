@@ -55,7 +55,7 @@ fun OfflineBanner(modifier: Modifier = Modifier) {
     }
 }
 
-/** Shown when no NVIDIA API key is available (built-in or user-provided). */
+/** Shown when no API key is available (built-in or user-provided). */
 @Composable
 fun NoKeyBanner(
     onOpenSettings: () -> Unit,

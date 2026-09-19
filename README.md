@@ -1,8 +1,8 @@
 # Raiwesy AI 🤖
 
-**NVIDIA API + GLM-5.3 modeli ile çalışan, modern Material Design 3 sohbet uygulaması.**
+**Raiwesy AI — modern Material Design 3 sohbet uygulaması.**
 
-Kullanıcı bir metin yazar, uygulama NVIDIA integrate API üzerinden `z-ai/glm-5.3` modeline istek gönderir ve yapay zekanın yanıtını **token token (streaming)** olarak ekranda gösterir.
+Kullanıcı bir metin yazar, uygulama yapay zeka API'sine istek gönderir ve yanıtı **token token (streaming)** olarak ekranda gösterir. Uygulama **hazır anahtarla** gelir; isterseniz kendi anahtarınızı Ayarlar'dan değiştirebilirsiniz.
 
 | | |
 |---|---|
@@ -12,23 +12,25 @@ Kullanıcı bir metin yazar, uygulama NVIDIA integrate API üzerinden `z-ai/glm-
 | **Ağ** | Retrofit 2 + OkHttp 4 (SSE streaming) |
 | **Tema** | Açık / Koyu / Sistem + Android 12+ dinamik renkler |
 | **minSdk / targetSdk** | 26 / 35 |
-| **CI** | GitHub Actions → Debug + Release APK artifact'ları |
+| **Sürüm** | 1.1.0 (versionCode 2) |
+| **CI** | GitHub Actions → Debug + Release APK artifact'ları + API sağlık kontrolü |
 
 ---
 
 ## ✨ Özellikler
 
 - 💬 **Sohbet ekranı** — kullanıcı (indigo) ve AI (yüzey tonu) balonları, avatar, zaman damgası
-- 📜 **Mesaj geçmişi** — uygulama kapansa bile kalıcı (cihazda saklanır) + son 8 mesaj API'ye bağlam olarak gönderilir
+- 🗂️ **Çoklu sohbet (ChatGPT gibi)** — istediğiniz kadar ayrı sohbet açın; sohbet listesi (menü ikonu), yeni sohbet, sohbet açma, sohbet silme; başlıklar ilk mesajdan otomatik oluşur
+- 📜 **Mesaj geçmişi** — tüm sohbetler uygulama kapansa bile kalıcı (cihazda saklanır) + son 8 mesaj API'ye bağlam olarak gönderilir
 - 📋 **Kopyala butonu** — her mesajda, tek dokunuşla panoya kopyalar
-- 🗑️ **Mesaj silme** — onay diyaloğuyla tekil silme + "tüm sohbeti temizle"
+- 🗑️ **Silme işlemleri** — tekil mesaj silme, sohbeti temizleme, sohbet silme (onay diyaloğuyla)
 - 🌙 **Karanlık tema** — Sistem / Açık / Koyu seçimi (ayarlar alt sayfasından)
 - ⏳ **Yükleniyor animasyonu** — "düşünüyor" noktacıkları + streaming sırasında yanıp sönen imleç
 - 🛑 **Durdur butonu** — devam eden yanıtı durdurur (kısmi yanıt korunur)
 - 📶 **İnternet kontrolü** — `NetworkMonitor` canlı bağlantı izler, çevrimdışı bandı gösterir
 - 🚨 **Hata yakalama** — 401/403/404/429/5xx, zaman aşımı, bağlantı hatası → Türkçe, anlaşılır mesaj + **"Tekrar dene"**
 - 🛡️ **Crash önleme** — global `UncaughtExceptionHandler`, tüm ağ/JSON işlemleri try-catch, dostane yeniden başlatma diyaloğu
-- 🔑 **Güvenli API anahtarı** — kaynak koda **asla gömülmez** (aşağıda anlatılır)
+- 🔑 **Otomatik API anahtarı** — uygulama hazır anahtarla çalışır; kendi anahtarınızla değiştirebilirsiniz
 - 🇹🇷 **Türkçe arayüz**
 
 ---
@@ -37,23 +39,21 @@ Kullanıcı bir metin yazar, uygulama NVIDIA integrate API üzerinden `z-ai/glm-
 
 ```
 ┌─────────────────────────────── UI (Compose) ───────────────────────────────┐
-│  ChatScreen  •  MessageBubble  •  Composer  •  EmptyState  •  Banners      │
-│  SettingsSheet                                                        │
+│  ChatScreen  •  ConversationsScreen  •  MessageBubble  •  Composer         │
+│  EmptyState  •  Banners  •  SettingsSheet                                  │
 └──────────────▲───────────────────────────────────────────┬─────────────────┘
                │  StateFlow<ChatUiState> (immutable)       │  user intents
 ┌──────────────┴───────────────────────────────────────────▼─────────────────┐
 │                         ChatViewModel  (ViewModel)                          │
-│   state yönetimi • hata haritalama • gönder/durdur/tekrar dene              │
+│   state yönetimi • hata haritalama • sohbet/mesaj işlemleri                │
 └──────────────▲───────────────────────────────────────────┬─────────────────┘
-               │  Flow<ChatStreamEvent>                    │  List<ChatMessage>
+               │  Flow<ChatStreamEvent>                    │  Conversation
 ┌──────────────┴───────────────────────────────────────────▼─────────────────┐
-│      ChatRepository (Data)   •   MessageStore   •   ApiKeyManager           │
-│      NvidiaApi (Retrofit)    •   NetworkMonitor                            │
-└─────────────────────────────────────────────────────────────────────────────┘
+│      ChatRepository (Data)   •   ConversationStore   •   ApiKeyManager      │
+│      AiApi (Retrofit)        •   NetworkMonitor                              │
+└────────────────────────────────────────────────────────────────────────────┘
                                     │
                         https://integrate.api.nvidia.com/v1/
-                                   │
-                            model: z-ai/glm-5.3
 ```
 
 ### Proje yapısı
@@ -61,7 +61,7 @@ Kullanıcı bir metin yazar, uygulama NVIDIA integrate API üzerinden `z-ai/glm-
 ```
 RaiwesyAI/
 ├── .github/
-│   ├── workflows/android.yml        # CI: otomatik debug+release APK
+│   ├── workflows/android.yml        # CI: otomatik debug+release APK + API kontrolü
 │   └── dependabot.yml               # haftalık bağımlılık güncellemeleri
 ├── app/
 │   ├── build.gradle.kts             # modül yapılandırması + anahtar enjeksiyonu
@@ -72,11 +72,11 @@ RaiwesyAI/
 │       │   ├── java/com/raiwesy/ai/
 │       │   │   ├── RaiwesyApp.kt            # Application + CrashHandler
 │       │   │   ├── MainActivity.kt          # tek activity (Compose kökü)
-│       │   │   ├── core/network/            # NvidiaApi, NetworkMonitor, hatalar
-│       │   │   ├── core/util/               # ApiKeyManager, MessageStore, CrashHandler
-│       │   │   ├── data/                    # ChatRepository, modeller, ChatMessage
+│       │   │   ├── core/network/            # AiApi, NetworkMonitor, hatalar
+│       │   │   ├── core/util/               # ApiKeyManager, ConversationStore, CrashHandler
+│       │   │   ├── data/                    # ChatRepository, Conversation, modeller
 │       │   │   ├── di/AppContainer.kt       # Retrofit/OkHttp kurulumu (DI)
-│       │   │   └── ui/                      # ChatScreen, ChatViewModel, theme, bileşenler
+│       │   │   └── ui/                      # ChatScreen, ConversationsScreen, ChatViewModel
 │       │   └── res/                         # stringler, temalar, launcher ikonları
 │       └── test/java/com/raiwesy/ai/data/  # birim testler (SSE ayrıştırma vb.)
 ├── gradle/
@@ -92,20 +92,25 @@ RaiwesyAI/
 
 ## 🔑 API Anahtarı Yönetimi
 
-**Anahtar kaynak kodda hiçbir yerde YOK.** Üç kademeli sistem:
+Dört kademeli sistem — **uygulama hazır anahtarla açılır, çalışır:**
 
 | Öncelik | Kaynak | Kullanım |
 |---|---|---|
-| 1 | `local.properties` → `nvidia_api_key` | Yerel geliştirme |
-| 2 | `NVIDIA_API_KEY` ortam değişkeni / GitHub Secret | CI ve script'ler |
-| 3 | **Uygulama içi Ayarlar ekranı** | Uygulama kullanıcısı (cihazda **şifreli** saklanır, gömülü anahtarı ezer) |
+| 1 | Uygulama içi Ayarlar ekranı | Kullanıcı kendi anahtarını girer (cihazda **şifreli** saklanır) |
+| 2 | `local.properties` → `nvidia_api_key` | Yerel geliştirme |
+| 3 | `NVIDIA_API_KEY` ortam değişkeni / GitHub Secret | CI derlemesi (APK'ya gömülür) |
+| 4 | **Gömülü varsayılan anahtar** (`ApiKeyManager.DEFAULT_API_KEY`) | Uygulama kutudan çıktığı gibi çalışır |
+
+> **Not:** Gömülü anahtar APK içinde bulunur (APK'lar decompile edilebilir).
+> Üretimde kendi anahtarınızı GitHub Secrets'a ekleyip gömülü anahtarı
+> `ApiKeyManager` içinden kaldırmanız önerilir.
 
 ### Yerel derleme
 
 ```bash
 cp local.properties.example local.properties
-# local.properties içine yazın:
-#   nvidia_api_key=nvda-...
+# (isteğe bağlı) local.properties içine yazın:
+#   nvidia_api_key=<kendi-anahtarınız>
 ./gradlew assembleDebug
 ```
 
@@ -115,7 +120,7 @@ Repo → **Settings → Secrets and variables → Actions** içine şunları ekl
 
 | Secret | Zorunlu | Açıklama |
 |---|---|---|
-| `NVIDIA_API_KEY` | Evet (uygulamanın çalışması için) | NVIDIA API anahtarı |
+| `NVIDIA_API_KEY` | Hayır (opsiyonel) | CI derlemesine gömülecek API anahtarı (yoksa gömülü varsayılan kullanılır) |
 | `KEYSTORE_BASE64` | Hayır | Release keystore'u base64 (yoksa APK imzasız üretilir) |
 | `KEYSTORE_PASSWORD` | Hayır | Keystore parolası |
 | `KEY_ALIAS` | Hayır | Anahtar alias'ı |
@@ -131,6 +136,10 @@ Her `push` sonrası Actions sekmesinden APK'ları indirin:
 
 - **RaiwesyAI-debug-apk** — `app-debug.apk` (imzalı, kuruluma hazır)
 - **RaiwesyAI-release-apk** — minify + resource shrink'lı release APK
+- **build-output-log** — yalnızca derleme hatasında tam Gradle logu
+
+Ek olarak **API Health Check** işi, API anahtarının + model adının çalıştığını doğrular
+(secret tanımlı değilse atlar).
 
 ---
 
@@ -141,11 +150,11 @@ Her `push` sonrası Actions sekmesinden APK'ları indirin:
 ```bash
 git clone <repo-url>
 cd RaiwesyAI.apk
-cp local.properties.example local.properties   # anahtarınızı girin
-./gradlew assembleDebug                        # ya da Android Studio'dan Run
+./gradlew assembleDebug                        # ya da Android Studio'dan Run ▶
 ```
 
-Android Studio: projeyi açın, bağımlılıklar senkronize olsun, `Run ▶`.
+Uygulamayı kurun → kullanın. Anahtar zaten gömülüdür; isterseniz
+⚙ **Ayarlar → API Anahtarı** ile değiştirin.
 
 ---
 
@@ -160,7 +169,7 @@ Android Studio: projeyi açın, bağımlılıklar senkronize olsun, `Run ▶`.
 ## 📡 API Kullanımı
 
 - **Base URL:** `https://integrate.api.nvidia.com/v1/`
-- **Model:** `z-ai/glm-5.3`
+- **Model:** `z-ai/glm-5.3` (`BuildConfig.MODEL` — `app/build.gradle.kts` içinden değiştirilebilir; CI'daki `api-check` işindeki `MODEL` değişkenini de güncelleyin)
 - **Endpoint:** `POST /chat/completions` (OpenAI uyumlu, `stream: true` → SSE)
 
 ```
@@ -181,8 +190,6 @@ Authorization: Bearer <anahtar>
 
 Her `data: {...}` satırı ayrıştırılır, `choices[0].delta.content` balona eklenir, `data: [DONE]` geldiğinde mesaj tamamlanır.
 
-> **Not:** Model adı, `app/build.gradle.kts` içindeki `MODEL` BuildConfig alanından değiştirilebilir.
-
 ---
 
 ## 📈 Versioning
@@ -197,13 +204,12 @@ Yeni sürüm için: `versionName` + `versionCode` artırın → commit → CI ot
 
 ## 🔒 Güvenlik
 
-- API anahtarı **yalnızca** derleme zamanında `BuildConfig`'a girer; `local.properties` git'te yok.
-- Çalıştırma zamanı anahtarı **EncryptedSharedPreferences** (Android Keystore, AES-256) ile saklanır.
-- OkHttp loglama `REDACTED` seviyesinde: `Authorization` başlığı asla log'a yazılmaz (release'da log tamamen kapalı).
+- Uygulama içi anahtar **EncryptedSharedPreferences** (Android Keystore, AES-256) ile saklanır.
+- OkHttp loglama `BASIC` seviyesinde: `Authorization` başlığı asla log'a yazılmaz (release'da log tamamen kapalı).
 - Global crash handler: istisna loglanır, kullanıcı uyarılır, uygulama temiz görevle yeniden başlatılır (döngü korumalı).
 
 ---
 
 ## 📄 Lisans
 
-Bu proje özel kullanım içindir. NVIDIA, GLM ve ilgili marka adları sahiplerine aittir.
+Bu proje özel kullanım içindir.

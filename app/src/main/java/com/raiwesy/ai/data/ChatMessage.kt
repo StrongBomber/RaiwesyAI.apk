@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 /**
  * Message role. [apiValue] is the wire value expected by the
- * OpenAI-compatible NVIDIA API ("user" / "assistant" / "system").
+ * OpenAI-compatible AI API ("user" / "assistant" / "system").
  */
 enum class Role(val apiValue: String) {
     @SerializedName("user")

@@ -9,12 +9,12 @@ import retrofit2.http.POST
 import retrofit2.http.Streaming
 
 /**
- * OpenAI-compatible chat completions client for the NVIDIA integrate API.
+ * OpenAI-compatible chat completions client (Raiwesy AI backend).
  *
  * Base URL: https://integrate.api.nvidia.com/v1/
- * Model:   z-ai/glm-5.3
+ * Model:   z-ai/glm-5.3 (BuildConfig.MODEL)
  */
-interface NvidiaApi {
+interface AiApi {
 
     /**
      * Non-streaming chat completion (fallback + simple requests).

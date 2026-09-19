@@ -7,8 +7,10 @@ import com.raiwesy.ai.core.network.ApiException
 import com.raiwesy.ai.core.network.MissingApiKeyException
 import com.raiwesy.ai.core.util.ApiKeyManager
 import com.raiwesy.ai.core.util.AppearanceMode
+import com.raiwesy.ai.core.util.ConversationStore
 import com.raiwesy.ai.data.ChatMessage
 import com.raiwesy.ai.data.ChatStreamEvent
+import com.raiwesy.ai.data.Conversation
 import com.raiwesy.ai.data.Role
 import com.raiwesy.ai.data.model.ChatRequestMessage
 import com.raiwesy.ai.di.AppContainer
@@ -40,7 +42,11 @@ data class ChatUiState(
     val snackbar: SnackbarEvent? = null,
     val messageToDelete: ChatMessage? = null,
     val clearChatRequested: Boolean = false,
-    val themeMode: AppearanceMode = AppearanceMode.SYSTEM
+    val themeMode: AppearanceMode = AppearanceMode.SYSTEM,
+    // ---- multi-conversation ----
+    val conversations: List<Conversation> = emptyList(),
+    val activeConversationId: String? = null,
+    val conversationToDelete: Conversation? = null
 )
 
 /** Transient snackbar event; [id] changes so the UI re-triggers on repeats. */
@@ -53,12 +59,13 @@ data class SnackbarEvent(val id: Long, val message: String)
  *  - exposing the immutable [ChatUiState] to the UI,
  *  - orchestrating the repository (data layer) for send/stop/retry,
  *  - mapping every failure to a friendly Turkish error message,
- *  - handling history operations (delete, clear) and settings (key, theme).
+ *  - conversation operations (new / open / delete / clear),
+ *  - message operations (delete, copy trigger) and settings (key, theme).
  */
 class ChatViewModel(private val container: AppContainer) : ViewModel() {
 
     private val repository = container.chatRepository
-    private val store = container.messageStore
+    private val store: ConversationStore = container.conversationStore
     private val keyManager: ApiKeyManager = container.keyManager
     private val networkMonitor = container.networkMonitor
 
@@ -70,17 +77,31 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         ChatUiState(
             isOnline = networkMonitor.isOnline.value,
             apiKeyConfigured = keyManager.effectiveKey() != null,
-            themeMode = keyManager.appearanceMode()
+            themeMode = keyManager.appearanceMode(),
+            conversations = store.conversations.value.sortedByDescending { it.updatedAt },
+            activeConversationId = store.activeId.value
         )
     )
     val state: StateFlow<ChatUiState> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
-            combine(store.messages, networkMonitor.isOnline) { messages, online ->
-                messages to online
-            }.collect { (messages, online) ->
-                _state.update { it.copy(messages = messages, isOnline = online) }
+            combine(
+                store.conversations,
+                store.activeId,
+                networkMonitor.isOnline
+            ) { convs, active, online ->
+                Triple(convs, active, online)
+            }.collect { (convs, active, online) ->
+                val activeConv = convs.firstOrNull { it.id == active }
+                _state.update {
+                    it.copy(
+                        conversations = convs.sortedByDescending { c -> c.updatedAt },
+                        activeConversationId = active,
+                        messages = activeConv?.messages.orEmpty(),
+                        isOnline = online
+                    )
+                }
             }
         }
     }
@@ -89,7 +110,7 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
     // Sending
     // ------------------------------------------------------------------
 
-    /** Sends the user text and streams the assistant reply. */
+    /** Sends the user text and streams the assistant reply (active conversation). */
     fun send(rawText: String) {
         val text = rawText.trim()
         val current = _state.value
@@ -105,13 +126,15 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         if (keyManager.effectiveKey() == null) {
             _state.update {
                 it.copy(
-                    error = "NVIDIA API anahtarı tanımlı değil. " +
-                        "Ayarlar bölümünden anahtarınızı ekleyin veya projeyi " +
-                        "local.properties / GitHub Secrets ile derleyin."
+                    error = "API anahtarı tanımlı değil. " +
+                        "Ayarlar bölümünden anahtarınızı ekleyin."
                 )
             }
             return
         }
+
+        // Guarantee there is an active conversation to write into.
+        val convId = ensureActiveConversation()
 
         val userMessage = ChatMessage(
             id = UUID.randomUUID().toString(),
@@ -119,11 +142,12 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
             content = text,
             timestamp = System.currentTimeMillis()
         )
-        store.add(userMessage)
+        store.addMessage(convId, userMessage)
         lastUserText = text
 
         val assistantId = UUID.randomUUID().toString()
-        store.add(
+        store.addMessage(
+            convId,
             ChatMessage(
                 id = assistantId,
                 role = Role.ASSISTANT,
@@ -133,7 +157,7 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
             )
         )
 
-        val history = buildHistory()
+        val history = buildHistory(convId)
         _state.update { it.copy(isSending = true, isStreaming = true, error = null) }
 
         streamJob = viewModelScope.launch {
@@ -141,27 +165,27 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
                 repository.streamChat(history).collect { event ->
                     when (event) {
                         is ChatStreamEvent.Content ->
-                            store.appendContent(assistantId, event.text)
+                            store.appendContent(convId, assistantId, event.text)
 
                         is ChatStreamEvent.Done ->
-                            store.finalizeMessage(assistantId)
+                            store.finalizeMessage(convId, assistantId)
                     }
                 }
                 _state.update { it.copy(isSending = false, isStreaming = false) }
             } catch (c: CancellationException) {
                 // User pressed "Durdur"
-                if (store.contentOf(assistantId).isNotBlank()) {
-                    store.finalizeMessage(assistantId)
+                if (store.contentOf(convId, assistantId).isNotBlank()) {
+                    store.finalizeMessage(convId, assistantId)
                     showMessage("Yanıt durduruldu.")
                 } else {
-                    store.remove(assistantId)
+                    store.removeMessage(convId, assistantId)
                 }
                 _state.update { it.copy(isSending = false, isStreaming = false) }
                 throw c
             } catch (t: Throwable) {
                 // Crash prevention: every failure is converted to a friendly
                 // error state; the app never dies because of a network error.
-                store.remove(assistantId)
+                store.removeMessage(convId, assistantId)
                 _state.update {
                     it.copy(isSending = false, isStreaming = false, error = friendlyError(t))
                 }
@@ -181,10 +205,17 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         send(text)
     }
 
-    private fun buildHistory(): List<ChatRequestMessage> {
+    private fun ensureActiveConversation(): String {
+        store.active()?.let { return it.id }
+        return store.newConversation().id
+    }
+
+    private fun buildHistory(convId: String): List<ChatRequestMessage> {
         val system = ChatRequestMessage(Role.SYSTEM.apiValue, BuildConfig.SYSTEM_PROMPT)
-        // Last N messages only: keeps requests small and responses fast.
-        val recent = store.messages.value
+        // Last N messages of the conversation only: keeps requests small and fast.
+        val recent = store.conversations.value
+            .firstOrNull { c -> c.id == convId }
+            ?.messages.orEmpty()
             .filter { it.content.isNotBlank() }
             .takeLast(HISTORY_LIMIT)
             .map { ChatRequestMessage(it.role.apiValue, it.content) }
@@ -192,7 +223,53 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     // ------------------------------------------------------------------
-    // History operations
+    // Conversation operations (ChatGPT style)
+    // ------------------------------------------------------------------
+
+    /** Starts a new, empty conversation and makes it active. */
+    fun newConversation() {
+        store.newConversation()
+        lastUserText = null
+        _state.update { it.copy(error = null) }
+    }
+
+    /** Opens an existing conversation. */
+    fun openConversation(id: String) {
+        if (id == _state.value.activeConversationId) return
+        if (!store.exists(id)) return
+        store.activate(id)
+        lastUserText = null
+        _state.update { it.copy(error = null) }
+    }
+
+    fun requestDeleteConversation(conversation: Conversation) {
+        _state.update { it.copy(conversationToDelete = conversation) }
+    }
+
+    fun cancelDeleteConversation() {
+        _state.update { it.copy(conversationToDelete = null) }
+    }
+
+    fun confirmDeleteConversation() {
+        val conversation = _state.value.conversationToDelete ?: return
+        if (conversation.id == _state.value.activeConversationId && streamJob != null) {
+            stop()
+        }
+        store.deleteConversation(conversation.id)
+        lastUserText = null
+        _state.update {
+            it.copy(
+                conversationToDelete = null,
+                error = null,
+                isSending = false,
+                isStreaming = false
+            )
+        }
+        showMessage("Sohbet silindi.")
+    }
+
+    // ------------------------------------------------------------------
+    // Message operations
     // ------------------------------------------------------------------
 
     fun requestDelete(message: ChatMessage) {
@@ -205,7 +282,8 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
 
     fun confirmDelete() {
         val message = _state.value.messageToDelete ?: return
-        store.remove(message.id)
+        val convId = _state.value.activeConversationId ?: return
+        store.removeMessage(convId, message.id)
         _state.update { it.copy(messageToDelete = null) }
         showMessage("Mesaj silindi.")
     }
@@ -218,14 +296,16 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(clearChatRequested = false) }
     }
 
+    /** Clears all messages of the ACTIVE conversation (keeps the conversation). */
     fun confirmClearChat() {
+        val convId = _state.value.activeConversationId ?: return
         if (streamJob != null) stop()
-        store.clear()
+        store.clearMessages(convId)
         lastUserText = null
         _state.update {
             it.copy(clearChatRequested = false, error = null, isSending = false, isStreaming = false)
         }
-        showMessage("Sohbet geçmişi temizlendi.")
+        showMessage("Sohbet temizlendi.")
     }
 
     // ------------------------------------------------------------------
@@ -237,7 +317,7 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         val key = rawKey.trim()
         if (key.isEmpty()) {
             keyManager.clearKey()
-            showMessage("API anahtarı kaldırıldı.")
+            showMessage("Cihazdaki anahtar kaldırıldı.")
         } else {
             keyManager.setKey(key)
             showMessage("API anahtarı kaydedildi.")
@@ -281,14 +361,14 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun friendlyError(t: Throwable): String = when (t) {
         is MissingApiKeyException ->
-            "NVIDIA API anahtarı tanımlı değil. Ayarlar bölümünden ekleyin."
+            "API anahtarı tanımlı değil. Ayarlar bölümünden ekleyin."
 
         is ApiException -> when (t.code) {
             401 -> "API anahtarı geçersiz veya süresi dolmuş (401). Ayarlar'dan kontrol edin."
             403 -> "Bu API anahtarıyla erişim izni yok (403)."
-            404 -> "Model bulunamadı (404). Model adını kontrol edin."
+            404 -> "Hizmet bu isteği işleyemedi (404). Tekrar deneyin."
             429 -> "Hız limiti aşıldı (429). Birkaç saniye bekleyip tekrar deneyin."
-            in 500..599 -> "NVIDIA sunucusu şu anda sorunlu (HTTP ${t.code}). Tekrar deneyin."
+            in 500..599 -> "Sunucu şu anda sorunlu (HTTP ${t.code}). Tekrar deneyin."
             else -> "Sunucu hatası (HTTP ${t.code}). Tekrar deneyin." +
                 (t.serverMessage?.let { " $it" } ?: "")
         }

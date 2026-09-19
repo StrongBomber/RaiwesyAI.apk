@@ -1,7 +1,7 @@
 package com.raiwesy.ai.data.model
 
 /**
- * OpenAI-compatible request/response models used by the NVIDIA integrate API.
+ * OpenAI-compatible request/response models used by the Raiwesy AI backend.
  * Only the fields the app needs are declared; Gson silently ignores the rest.
  */
 

@@ -5,7 +5,7 @@ import com.google.gson.JsonObject
 import com.raiwesy.ai.BuildConfig
 import com.raiwesy.ai.core.network.ApiException
 import com.raiwesy.ai.core.network.MissingApiKeyException
-import com.raiwesy.ai.core.network.NvidiaApi
+import com.raiwesy.ai.core.network.AiApi
 import com.raiwesy.ai.core.util.ApiKeyManager
 import com.raiwesy.ai.data.model.ChatChunk
 import com.raiwesy.ai.data.model.ChatCompletionRequest
@@ -18,14 +18,14 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 /**
- * Data layer: talks to the NVIDIA API (Retrofit + OkHttp) and exposes
+ * Data layer: talks to the AI API (Retrofit + OkHttp) and exposes
  * chat operations to the ViewModel (MVVM).
  *
  * The primary path is token streaming (SSE) for fast perceived response;
  * a non-streaming call is kept as a fallback/validation helper.
  */
 class ChatRepository(
-    private val api: NvidiaApi,
+    private val api: AiApi,
     private val keyManager: ApiKeyManager
 ) {
 
@@ -139,16 +139,16 @@ class ChatRepository(
         /**
          * Extracts a human-readable detail from an error body.
          * Supports the OpenAI style (`{"error":{"message":...}}`) and the
-         * NVIDIA style (`{"detail":...}` / `{"message":...}`).
+         * alternative style (`{"detail":...}` / `{"message":...}`).
          */
         fun extractErrorDetail(body: String?): String? {
             if (body.isNullOrBlank()) return null
             return try {
                 val obj = companionGson.fromJson(body, JsonObject::class.java)
                 val openAiMessage = obj?.getAsJsonObject("error")?.get("message")
-                val nvidiaDetail = obj?.get("detail")
+                val detailField = obj?.get("detail")
                 val plainMessage = obj?.get("message")
-                (openAiMessage ?: nvidiaDetail ?: plainMessage)
+                (openAiMessage ?: detailField ?: plainMessage)
                     ?.takeIf { it.isJsonPrimitive }
                     ?.asString
                     ?.trim()

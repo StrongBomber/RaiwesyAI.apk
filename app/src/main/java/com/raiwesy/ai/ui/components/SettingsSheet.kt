@@ -97,7 +97,7 @@ fun SettingsSheet(
                 onValueChange = { keyInput = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.api_key_label)) },
-                placeholder = { Text("nvda-...") },
+                placeholder = { Text("API anahtarınız…") },
                 singleLine = true,
                 visualTransformation = if (keyVisible) {
                     VisualTransformation.None
@@ -197,8 +197,6 @@ fun SettingsSheet(
                 Text(
                     text = stringResource(
                         R.string.about_text,
-                        BuildConfig.MODEL,
-                        BuildConfig.API_BASE_URL,
                         BuildConfig.VERSION_NAME
                     ),
                     style = MaterialTheme.typography.bodySmall,

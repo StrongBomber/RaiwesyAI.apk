@@ -3,10 +3,10 @@ package com.raiwesy.ai.di
 import android.content.Context
 import android.util.Log
 import com.raiwesy.ai.BuildConfig
-import com.raiwesy.ai.core.network.NvidiaApi
+import com.raiwesy.ai.core.network.AiApi
 import com.raiwesy.ai.core.network.NetworkMonitor
 import com.raiwesy.ai.core.util.ApiKeyManager
-import com.raiwesy.ai.core.util.MessageStore
+import com.raiwesy.ai.core.util.ConversationStore
 import com.raiwesy.ai.data.ChatRepository
 import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
@@ -25,7 +25,7 @@ class AppContainer(context: Context) {
     private val appContext = context.applicationContext
 
     val keyManager = ApiKeyManager(appContext)
-    val messageStore = MessageStore(appContext)
+    val conversationStore = ConversationStore(appContext)
     val networkMonitor = NetworkMonitor(appContext)
 
     private val okHttpClient: OkHttpClient by lazy {
@@ -71,11 +71,11 @@ class AppContainer(context: Context) {
             .build()
     }
 
-    val nvidiaApi: NvidiaApi by lazy {
-        retrofit.create(NvidiaApi::class.java)
+    val aiApi: AiApi by lazy {
+        retrofit.create(AiApi::class.java)
     }
 
     val chatRepository: ChatRepository by lazy {
-        ChatRepository(nvidiaApi, keyManager)
+        ChatRepository(aiApi, keyManager)
     }
 }

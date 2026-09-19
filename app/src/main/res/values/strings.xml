@@ -2,8 +2,9 @@
 <resources>
     <!-- Uygulama -->
     <string name="app_name">Raiwesy AI</string>
-    <string name="model_badge">%1$s • NVIDIA</string>
     <string name="settings">Ayarlar</string>
+    <string name="status_online">Bağlı</string>
+    <string name="status_offline">Çevrimdışı</string>
 
     <!-- Yazma çubuğu -->
     <string name="composer_placeholder">Bir mesaj yazın…</string>
@@ -12,16 +13,27 @@
 
     <!-- Boş durum -->
     <string name="empty_title">Raiwesy AI</string>
-    <string name="empty_subtitle">Merhaba! Bugün size nasıl yardımcı olabilirim? GLM-5.3 modeliyle sohbet etmeye başlayın.</string>
+    <string name="empty_subtitle">Merhaba! Bugün size nasıl yardımcı olabilirim? Sohbet etmeye başlayın.</string>
     <string-array name="suggestions">
         <item>Bana kendinden bahset</item>
         <item>Yapay zeka nedir?</item>
         <item>Bana kısa bir şiir yaz</item>
     </string-array>
 
+    <!-- Sohbetler (çoklu sohbet) -->
+    <string name="conversations_title">Sohbetler</string>
+    <string name="new_chat">Yeni sohbet</string>
+    <string name="back">Geri</string>
+    <string name="no_conversations">Henüz sohbet yok. Yeni bir sohbet başlatın.</string>
+    <string name="conversation_subtitle">%1$s • %2$d mesaj</string>
+    <string name="delete_chat">Sohbeti sil</string>
+    <string name="delete_chat_title">Sohbeti sil</string>
+    <string name="delete_chat_text">Bu sohbet ve içindeki tüm mesajlar kalıcı olarak silinecek. Emin misiniz?</string>
+    <string name="delete_chat_confirm">Evet, sil</string>
+
     <!-- Durum bantları -->
     <string name="offline_banner">Çevrimdışısınız. Mesaj göndermek için internet bağlantısı gereklidir.</string>
-    <string name="no_key_banner">NVIDIA API anahtarı tanımlı değil.</string>
+    <string name="no_key_banner">API anahtarı tanımlı değil.</string>
     <string name="open_settings">Ayarlar</string>
     <string name="error_title">Hata</string>
     <string name="retry">Tekrar dene</string>
@@ -33,9 +45,9 @@
     <string name="delete">Sil</string>
     <string name="cancel">Vazgeç</string>
     <string name="clear_chat_title">Sohbeti temizle</string>
-    <string name="clear_chat_text">Tüm mesaj geçmişi kalıcı olarak silinecek. Emin misiniz?</string>
+    <string name="clear_chat_text">Bu sohbetteki tüm mesajlar kalıcı olarak silinecek. Emin misiniz?</string>
     <string name="clear_chat_confirm">Evet, temizle</string>
-    <string name="clear_chat">Tüm sohbeti sil</string>
+    <string name="clear_chat">Bu sohbeti temizle</string>
 
     <!-- Çökme koruma -->
     <string name="crash_toast">Beklenmeyen bir hata oluştu. Uygulama yeniden başlatılıyor…</string>
@@ -46,9 +58,9 @@
     <!-- Ayarlar: API anahtarı -->
     <string name="section_api_key">API Anahtarı</string>
     <string name="api_key_info">Anahtarınızı bu ekrana yapıştırın. Anahtar yalnızca bu cihazda şifreli olarak saklanır; kaynak koda asla yazılmaz.</string>
-    <string name="api_key_embedded_info">Derleme sırasında bir anahtar gömüldü. İsterseniz buraya kendi anahtarınızı yazarak onu geçersiz kılabilirsiniz.</string>
-    <string name="api_key_label">NVIDIA API Key</string>
-    <string name="api_key_supporting">nvda- ile başlayan anahtarınızı kullanın. Boş bırakıp kaydetmek cihazdaki anahtarı siler.</string>
+    <string name="api_key_embedded_info">Uygulamaya bir varsayılan anahtar gömüldü; uygulama hazır durumda çalışır. İsterseniz buraya kendi anahtarınızı yazarak onu geçersiz kılabilirsiniz.</string>
+    <string name="api_key_label">API Anahtarı</string>
+    <string name="api_key_supporting">Boş bırakıp kaydetmek cihazdaki anahtarı siler; uygulama varsayılan anahtara döner.</string>
     <string name="api_key_clear">Temizle</string>
     <string name="save">Kaydet</string>
     <string name="toggle_key_visibility">Anahtarı göster/gizle</string>
@@ -62,5 +74,5 @@
     <!-- Ayarlar: sohbet ve hakkında -->
     <string name="section_chat">Sohbet</string>
     <string name="section_about">Hakkında</string>
-    <string name="about_text">Model: %1$s\nAPI: %2$s\nSürüm: %3$s</string>
+    <string name="about_text">Raiwesy AI — Sürüm %1$s</string>
 </resources>

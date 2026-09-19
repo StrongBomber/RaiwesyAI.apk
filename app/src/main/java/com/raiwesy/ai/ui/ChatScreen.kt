@@ -22,8 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -51,9 +51,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.raiwesy.ai.BuildConfig
 import com.raiwesy.ai.R
 import com.raiwesy.ai.ui.components.Composer
+import com.raiwesy.ai.ui.components.ConversationsScreen
 import com.raiwesy.ai.ui.components.EmptyState
 import com.raiwesy.ai.ui.components.ErrorBanner
 import com.raiwesy.ai.ui.components.MessageBubble
@@ -75,6 +75,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
 
     var text by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
+    var showList by remember { mutableStateOf(false) }
     var showCrashDialog by remember { mutableStateOf(viewModel.consumeCrashMark()) }
 
     // ---------------- transient snackbar ----------------
@@ -108,6 +109,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
         viewModel.showMessage("Kopyalandı.")
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -134,7 +136,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
                             )
                             Spacer(Modifier.width(5.dp))
                             Text(
-                                text = stringResource(R.string.model_badge, BuildConfig.MODEL),
+                                text = stringResource(
+                                    if (state.isOnline) R.string.status_online
+                                    else R.string.status_offline
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -142,11 +147,12 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     }
                 },
                 navigationIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.AutoAwesome,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    IconButton(onClick = { showList = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Menu,
+                            contentDescription = stringResource(R.string.conversations_title)
+                        )
+                    }
                 },
                 actions = {
                     IconButton(onClick = { showSettings = true }) {
@@ -240,6 +246,25 @@ fun ChatScreen(viewModel: ChatViewModel) {
         }
     }
 
+    // ---------------- conversation list (full-screen overlay) ----------------
+    if (showList) {
+        ConversationsScreen(
+            conversations = state.conversations,
+            activeId = state.activeConversationId,
+            onBack = { showList = false },
+            onNew = {
+                viewModel.newConversation()
+                showList = false
+            },
+            onOpen = { id ->
+                viewModel.openConversation(id)
+                showList = false
+            },
+            onDelete = { viewModel.requestDeleteConversation(it) }
+        )
+    }
+    }
+
     // ---------------- dialogs ----------------
     state.messageToDelete?.let { message ->
         AlertDialog(
@@ -271,6 +296,24 @@ fun ChatScreen(viewModel: ChatViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.cancelClearChat() }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    state.conversationToDelete?.let { conversation ->
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelDeleteConversation() },
+            title = { Text(stringResource(R.string.delete_chat_title)) },
+            text = { Text(stringResource(R.string.delete_chat_text)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmDeleteConversation() }) {
+                    Text(stringResource(R.string.delete_chat_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelDeleteConversation() }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
